@@ -1,0 +1,5 @@
+# 빌드 중간 산출물 (probe/dist/httpprobe.jar 는 반입용 작은 시험 파일이라 커밋한다)
+/probe/build/
+/target/
+*.log
+*.pid
