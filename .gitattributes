@@ -1,0 +1,4 @@
+# AIX ksh fails on CRLF ("\r: not found"), and Windows checkouts (core.autocrlf=true) would turn LF into CRLF.
+# Keep the files that are copied to the server as LF.
+*.sh text eol=lf
+*.sample text eol=lf

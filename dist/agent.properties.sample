@@ -1,0 +1,98 @@
+# dbagent-agent (ISFAgent) configuration sample.
+# Copy to agent.properties, edit, then: chmod 600 agent.properties   (it holds the token)
+#
+# Keep this file ASCII: AIX consoles are often EUC-KR and garble UTF-8 text.
+# The required keys below are commented out on purpose - the agent refuses to start until you set them,
+# and it reports every problem at once. Lines starting with # are comments.
+
+# ---------------------------------------------------------------------------------------------------
+# Network
+# ---------------------------------------------------------------------------------------------------
+
+# REQUIRED. IP of THIS server that the app server connects to. Avoid 0.0.0.0 (all interfaces).
+#agent.bind-address=10.0.0.11
+
+# Listening port (default 8710).
+#agent.port=8710
+
+# Optional. Comma separated IPs of the app server(s). Requests from any other address are refused at once.
+# Strongly recommended. Also list this server's own agent.bind-address (127.0.0.1 if bind-address=0.0.0.0):
+# start-agent.sh and --health / --get connect from this server, and would otherwise get HTTP 401.
+#agent.allowed-clients=10.0.0.5,10.0.0.11
+
+# ---------------------------------------------------------------------------------------------------
+# Authentication
+# ---------------------------------------------------------------------------------------------------
+
+# hmac (default): every request is signed with the token; the token itself never travels on the wire.
+# bearer: simple token header - the token is visible on the network without TLS. Use only for tests.
+#agent.auth-mode=hmac
+
+# REQUIRED for hmac. Paste the token generated in the DB InsightFlow "DB management" screen (256-bit, 64 hex chars,
+# minimum 32 characters). Use a different token for every node.
+#agent.token=
+
+# bearer only: SHA-256 (64 hex) of the token instead of the token itself.
+#agent.token-sha256=
+
+# Allowed difference between the app server clock and this server clock (seconds). Keep both servers on NTP.
+#agent.clock-skew-seconds=60
+
+# ---------------------------------------------------------------------------------------------------
+# What the agent may read
+# ---------------------------------------------------------------------------------------------------
+
+# REQUIRED. Comma separated absolute directories. The agent reads nothing outside them, and it refuses symbolic links
+# to files. Example: the ADR base directory (diag).
+#agent.allowed-roots=/oracle/app/oracle/diag
+
+# REQUIRED. Comma separated instance names (letters, digits, underscore). One entry per Oracle instance on THIS server.
+#agent.sids=PATDB1
+
+# REQUIRED per SID. Full path of alert_<SID>.log (text file under the ADR trace directory).
+#agent.sid.PATDB1.alert-log=/oracle/app/oracle/diag/rdbms/patdb/PATDB1/trace/alert_PATDB1.log
+
+# Step 2 (tkprof) keys - ignored for now, safe to set already.
+#agent.sid.PATDB1.trace-dir=/oracle/app/oracle/diag/rdbms/patdb/PATDB1/trace
+#agent.sid.PATDB1.oracle-home=/oracle/app/oracle/product/19c
+#agent.oracle-home=/oracle/app/oracle/product/19c
+#agent.tkprof.path=
+#agent.tkprof.timeout-seconds=120
+#agent.tkprof.max-input-mb=500
+#agent.tkprof.nice=0
+#agent.trace.require-identifier=true
+
+# ---------------------------------------------------------------------------------------------------
+# Alert log reading
+# ---------------------------------------------------------------------------------------------------
+
+# Character set of the alert log (default: the JVM default, which is ASCII under LANG=C). Set UTF-8 or EUC-KR if the
+# log contains non-English text.
+#agent.alert-log.charset=UTF-8
+
+# Time zone used for 11g/12.1 style time stamps ("Mon Oct 20 10:00:00 2026"), which carry no zone.
+# Default: the JVM time zone. Set it when the JVM zone differs from the database server zone.
+#agent.alert-log.timezone=Asia/Seoul
+
+# Largest number of lines (tail) / entries (search) one request may return.
+#agent.alert-log.max-lines=2000
+
+# How far back (MB) one search may read from the end of the file. A search that reaches this limit reports truncated=true.
+#agent.alert-log.max-scan-mb=64
+
+# Upper limit of one response text (bytes).
+#agent.output.max-bytes=5242880
+
+# ---------------------------------------------------------------------------------------------------
+# Runtime
+# ---------------------------------------------------------------------------------------------------
+
+# Worker threads (default 4).
+#agent.http.threads=4
+
+# Log and work directories. Relative paths are relative to the directory of this file.
+#agent.log-dir=logs
+#agent.work-dir=work
+
+# TLS is not supported in this version (planned). Leave false.
+#agent.tls.enabled=false

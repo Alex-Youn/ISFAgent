@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.dbagent</groupId>
+    <artifactId>dbagent-agent</artifactId>
+    <version>0.1.0</version>
+    <packaging>jar</packaging>
+    <name>dbagent-agent (ISFAgent)</name>
+    <description>DB InsightFlow 선택형 에이전트 - DB 서버에 설치해 알럿 로그·tkprof를 읽기 전용으로 제공한다</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- (2026-10-21 오케스트레이터 결정) 에이전트는 처음부터 Java 8: 폐쇄망 AIX 번들 java8(IBM J9 1.8.0_503)로 실행한다.
+             번들 jdk17로 빌드해도 release 8 옵션이라 Java 9+ API를 쓰면 컴파일이 실패한다. (XML 주석에는 대시 두 개를 쓸 수 없다) -->
+        <maven.compiler.release>8</maven.compiler.release>
+    </properties>
+
+    <!-- 의존성 없음: HTTP 서버는 JDK 내장 com.sun.net.httpserver(설계서 T1 A안, 2026-10-21 폐쇄망 실측 통과), JSON은 직접 작성.
+         그래서 shade·fat jar 없이 단일 jar 하나로 반입한다. 의존성을 추가하면 반입 부담이 생기므로 먼저 오케스트레이터와 상의한다. -->
+
+    <build>
+        <finalName>dbagent-agent</finalName>
+        <!-- 번들 maven39 의 오프라인 캐시에 있는 플러그인 버전으로 고정한다(폐쇄망·네트워크 없는 빌드 대비). -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.3.2</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.dbagent.agent.AgentMain</mainClass>
+                            <!-- 버전 출력 옵션이 jar 매니페스트의 버전을 읽는다 -->
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
