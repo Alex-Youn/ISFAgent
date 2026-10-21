@@ -63,7 +63,16 @@ public final class AgentMain {
     }
 
     private static AgentConfig loadConfig(String file) {
-        Path p = Paths.get(file);
+        Path p;
+        try {
+            p = Paths.get(file);
+        } catch (java.nio.file.InvalidPathException e) {
+            // LANG=C 처럼 파일 이름 인코딩이 한글을 표현하지 못하는 환경 - 스택 트레이스 대신 한 줄로 알린다(2026-10-22 1-C 시험)
+            System.err.println("CONFIG ERROR: config file path cannot be used by this JVM (file name encoding "
+                    + System.getProperty("sun.jnu.encoding") + "); use an ASCII path or set LANG/LC_ALL");
+            System.exit(1);
+            return null;
+        }
         if (!Files.isRegularFile(p)) {
             System.err.println("CONFIG ERROR: config file not found: " + file);
             System.exit(1);

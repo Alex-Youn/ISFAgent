@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
@@ -140,9 +141,10 @@ public final class AgentConfig {
         }
         String tk = str("agent.tkprof.path", null);
         if (tk != null) {
-            tkprofPath = Paths.get(tk);
+            tkprofPath = toPath("agent.tkprof.path", tk);
         } else if (oracleHome != null) {
-            tkprofPath = Paths.get(oracleHome, "bin", "tkprof");
+            Path home = toPath("agent.oracle-home", oracleHome);
+            tkprofPath = home == null ? null : home.resolve("bin").resolve("tkprof");
         }
 
         httpThreads = intVal("agent.http.threads", 4, 1, 32);
@@ -212,7 +214,10 @@ public final class AgentConfig {
         }
         List<Path> roots = new ArrayList<Path>();
         for (String s : raw) {
-            Path p = Paths.get(s);
+            Path p = toPath("agent.allowed-roots", s);
+            if (p == null) {
+                continue;
+            }
             if (!p.isAbsolute()) {
                 errors.add("agent.allowed-roots entry must be an absolute path: " + s);
                 continue;
@@ -252,7 +257,10 @@ public final class AgentConfig {
                 errors.add(prefix + "alert-log is required");
                 continue;
             }
-            Path alertPath = Paths.get(alert);
+            Path alertPath = toPath(prefix + "alert-log", alert);
+            if (alertPath == null) {
+                continue;
+            }
             if (!alertPath.isAbsolute()) {
                 errors.add(prefix + "alert-log must be an absolute path: " + alert);
                 continue;
@@ -260,7 +268,10 @@ public final class AgentConfig {
             String trace = str(prefix + "trace-dir", null);
             Path tracePath = null;
             if (trace != null) {
-                tracePath = Paths.get(trace);
+                tracePath = toPath(prefix + "trace-dir", trace);
+                if (tracePath == null) {
+                    continue;
+                }
                 if (!tracePath.isAbsolute()) {
                     errors.add(prefix + "trace-dir must be an absolute path: " + trace);
                     continue;
@@ -374,8 +385,26 @@ public final class AgentConfig {
 
     private Path dir(String key, String def) {
         String v = str(key, def);
-        Path p = Paths.get(v);
+        Path p = toPath(key, v);
+        if (p == null) {
+            return baseDir;   // 오류는 이미 기록했다(load 가 설정 오류로 끝낸다) - 여기서는 NPE 를 피하려고 아무 폴더나 돌려준다
+        }
         return p.isAbsolute() ? p.normalize() : baseDir.resolve(p).normalize();
+    }
+
+    /**
+     * 설정 값을 경로로 바꾼다. 이 JVM 의 파일 이름 인코딩(sun.jnu.encoding)이 표현하지 못하는 글자가 들어 있으면(예: LANG=C 인 AIX 서버에 한글 경로)
+     * Paths.get 이 InvalidPathException 을 던져 스택 트레이스와 함께 죽는데, 다른 설정 오류처럼 한 번에 알리도록 오류로 기록하고 null 을 돌려준다
+     * (2026-10-22 1-C 시험: 컨테이너 LANG=C 에서 한글 파일 이름 재현).
+     */
+    private Path toPath(String key, String value) {
+        try {
+            return Paths.get(value);
+        } catch (InvalidPathException e) {
+            errors.add(key + " has a path this JVM cannot use (characters the file name encoding " + System.getProperty("sun.jnu.encoding")
+                    + " cannot represent) - set LANG/LC_ALL to the locale that matches the path or use an ASCII path: " + value.replaceAll("[^ -~]", "?"));
+            return null;
+        }
     }
 
     // ---------------------------------------------------------------- 접근자

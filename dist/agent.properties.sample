@@ -73,6 +73,10 @@
 # log contains non-English text.
 #agent.alert-log.charset=UTF-8
 
+# Note: every path in this file must be representable by the JVM file name encoding. Under LANG=C a non-ASCII path (for example
+# Korean) is reported as a CONFIG ERROR at start (it used to end with a stack trace). Use ASCII paths or start the agent
+# with a LANG/LC_ALL that matches the path.
+
 # Time zone used for 11g/12.1 style time stamps ("Mon Oct 20 10:00:00 2026"), which carry no zone.
 # Default: the JVM time zone. Set it when the JVM zone differs from the database server zone.
 #agent.alert-log.timezone=Asia/Seoul
