@@ -146,7 +146,8 @@ public final class AgentConfig {
         }
 
         httpThreads = intVal("agent.http.threads", 4, 1, 32);
-        alertMaxLines = intVal("agent.alert-log.max-lines", 2000, 10, 20000);
+        // 기본 5000: 앱의 알럿 로그 팝업이 500/1000/5000줄을 고르게 하므로(2026-10-21 오케스트레이터 결정) 에이전트 기본 상한이 더 작으면 5000줄을 못 받는다.
+        alertMaxLines = intVal("agent.alert-log.max-lines", 5000, 10, 20000);
         alertMaxScanBytes = (long) intVal("agent.alert-log.max-scan-mb", 64, 1, 4096) * 1024L * 1024L;
         outputMaxBytes = intVal("agent.output.max-bytes", 5 * 1024 * 1024, 64 * 1024, 100 * 1024 * 1024);
 

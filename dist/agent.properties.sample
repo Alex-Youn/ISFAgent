@@ -78,7 +78,8 @@
 #agent.alert-log.timezone=Asia/Seoul
 
 # Largest number of lines (tail) / entries (search) one request may return.
-#agent.alert-log.max-lines=2000
+# Default 5000 so the app's alert log popup can show 500 / 1000 / 5000 lines (2026-10-21). Allowed range 10 - 20000.
+#agent.alert-log.max-lines=5000
 
 # How far back (MB) one search may read from the end of the file. A search that reaches this limit reports truncated=true.
 #agent.alert-log.max-scan-mb=64
