@@ -66,6 +66,7 @@ public final class AgentConfig {
     private List<Path> allowedRoots = Collections.emptyList();
     private Map<String, SidConfig> sids = Collections.emptyMap();
     private String oracleHome;
+    private boolean oracleHomeFromEnv;
     private Path tkprofPath;
     private int httpThreads;
     private int alertMaxLines;
@@ -127,6 +128,16 @@ public final class AgentConfig {
         parseSids();
 
         oracleHome = str("agent.oracle-home", null);
+        if (oracleHome == null) {
+            // (2026-10-21 오케스트레이터) OS 계정(sfo_user)의 프로파일에 ORACLE_HOME 이 이미 있으므로 따로 적지 않아도 된다.
+            // 설정 파일 값이 있으면 그것이 우선이다 - 재부팅 뒤 cron·inittab 으로 기동하면 프로파일이 없어 환경 변수가 비고,
+            // 한 서버에 홈이 여럿이면 tkprof 버전을 트레이스 파일의 DB 버전에 맞춰야 하기 때문이다.
+            String env = System.getenv("ORACLE_HOME");
+            if (env != null && !env.trim().isEmpty()) {
+                oracleHome = env.trim();
+                oracleHomeFromEnv = true;
+            }
+        }
         String tk = str("agent.tkprof.path", null);
         if (tk != null) {
             tkprofPath = Paths.get(tk);
@@ -409,8 +420,13 @@ public final class AgentConfig {
         return sids;
     }
 
+    /** 설정 파일 값, 없으면 에이전트를 띄운 계정 환경의 ORACLE_HOME. 둘 다 없으면 null. */
     public String getOracleHome() {
         return oracleHome;
+    }
+
+    public boolean isOracleHomeFromEnv() {
+        return oracleHomeFromEnv;
     }
 
     /** 전역 tkprof 경로. ORACLE_HOME 도 경로도 없으면 null. */

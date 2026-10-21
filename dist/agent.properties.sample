@@ -55,6 +55,9 @@
 # Step 2 (tkprof) keys - ignored for now, safe to set already.
 #agent.sid.PATDB1.trace-dir=/oracle/app/oracle/diag/rdbms/patdb/PATDB1/trace
 #agent.sid.PATDB1.oracle-home=/oracle/app/oracle/product/19c
+# Optional. Leave it unset when the OS account that starts the agent already has ORACLE_HOME in its profile:
+# the agent then uses that value. A value here wins over the environment - set it when the agent is started from
+# cron/inittab (no profile) or when the server has several Oracle homes.
 #agent.oracle-home=/oracle/app/oracle/product/19c
 #agent.tkprof.path=
 #agent.tkprof.timeout-seconds=120

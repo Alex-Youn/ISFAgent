@@ -107,6 +107,8 @@ public final class AgentMain {
                 + " (auth=" + cfg.getAuthMode() + ", sids=" + cfg.getSids().keySet() + ", java=" + System.getProperty("java.version")
                 + ", user=" + System.getProperty("user.name") + ")";
         AgentLog.info(msg);
+        AgentLog.info("oracle-home=" + (cfg.getOracleHome() == null ? "(not set, tkprof unavailable)"
+                : cfg.getOracleHome() + (cfg.isOracleHomeFromEnv() ? " (from environment)" : " (from agent.properties)")));
         System.out.println(msg);
         stop.await();
     }
