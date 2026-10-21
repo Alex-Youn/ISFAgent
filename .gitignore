@@ -3,3 +3,5 @@
 /target/
 *.log
 *.pid
+/dist/*.jar
+/dist/*.bak-*
