@@ -49,16 +49,17 @@ public final class Json {
     public static long escapedLength(String s) {
         long n = 0;
         for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c == '"' || c == '\\' || c == '\n' || c == '\r' || c == '\t') {
-                n += 2;
-            } else if (c < 0x20 || c > 0x7E) {
-                n += 6;
-            } else {
-                n++;
-            }
+            n += escapedLength(s.charAt(i));
         }
         return n;
+    }
+
+    /** 글자 하나가 JSON 으로 나갈 때의 바이트 수(1, 2 또는 6). 큰 텍스트를 응답 상한에서 자를 지점을 찾는 데 쓴다. */
+    public static int escapedLength(char c) {
+        if (c == '"' || c == '\\' || c == '\n' || c == '\r' || c == '\t') {
+            return 2;
+        }
+        return (c < 0x20 || c > 0x7E) ? 6 : 1;
     }
 
     private static final class Counter implements Appendable {

@@ -55,18 +55,37 @@
 # agent.allowed-roots 안에 있어야 한다. 키 중간의 <SID> 는 agent.sids 에 적은 이름과 같아야 한다.
 #agent.sid.PATDB1.alert-log=/oracle/app/oracle/diag/rdbms/patdb/PATDB1/trace/alert_PATDB1.log
 
-# 2단계(tkprof) 키 - 지금은 무시된다. 미리 적어 두어도 안전하다.
+# ---------------------------------------------------------------------------------------------------
+# tkprof (세션 트레이스 분석, 2단계). 트레이스 기능을 쓰지 않으면 아래는 적지 않아도 된다.
+# ---------------------------------------------------------------------------------------------------
+
+# 선택. SID의 트레이스(.trc) 폴더. 비우면 알럿 로그가 있는 폴더를 쓴다(11g 이상 ADR은 같은 trace 폴더).
+# 이 폴더도 agent.allowed-roots 안에 있어야 한다.
 #agent.sid.PATDB1.trace-dir=/oracle/app/oracle/diag/rdbms/patdb/PATDB1/trace
+
+# 선택. 이 SID의 tkprof 를 찾을 ORACLE_HOME (트레이스 파일을 만든 DB 버전과 맞추는 것이 안전하다). 비우면 아래 전역 값을 쓴다.
 #agent.sid.PATDB1.oracle-home=/oracle/app/oracle/product/19c
+
 # 선택. 에이전트를 기동하는 OS 계정의 프로필에 ORACLE_HOME 이 이미 있으면 비워 둔다 - 그 값을 쓴다.
 # 여기에 값을 쓰면 환경변수보다 우선한다. cron/inittab 으로 기동해 프로필이 없거나
-# 서버에 Oracle 홈이 여러 개일 때 지정한다.
+# 서버에 Oracle 홈이 여러 개일 때 지정한다. tkprof 를 찾지 못하면 health 의 tkprofOk 가 false 이고 tkprof 요청은 503 이다.
 #agent.oracle-home=/oracle/app/oracle/product/19c
+
+# 선택. 기본은 <oracle-home>/bin/tkprof.
 #agent.tkprof.path=
+
+# tkprof 한 건의 제한 시간(초, 5~600). 넘으면 프로세스를 강제 종료하고 504 로 응답한다. 앱의 응답 대기는 이 값보다 길어야 한다.
 #agent.tkprof.timeout-seconds=120
+
+# 동시에 실행할 tkprof 수(1~8). tkprof 는 CPU·디스크를 쓰므로 운영 DB 서버는 1로 낮출 수 있다.
+# 자리가 없으면 요청은 최대 30초 기다린 뒤 429(BUSY)로 끝난다.
+#agent.tkprof.max-concurrent=2
+
+# 분석할 트레이스 파일의 최대 크기(MB). 넘으면 413 으로 거절한다.
 #agent.tkprof.max-input-mb=500
+
+# 0 이면 사용하지 않는다. 1~19 이면 tkprof 를 nice -n <값> 으로 실행해 DB 서버에 미치는 영향을 줄인다.
 #agent.tkprof.nice=0
-#agent.trace.require-identifier=true
 
 # ---------------------------------------------------------------------------------------------------
 # 알럿 로그 읽기

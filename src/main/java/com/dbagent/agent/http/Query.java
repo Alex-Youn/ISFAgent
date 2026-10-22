@@ -7,15 +7,15 @@ import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 
-/** 쿼리 문자열 해석. 길이를 먼저 제한하고, 같은 키가 반복되면 마지막 값을 쓴다. */
-final class Query {
+/** 쿼리 문자열 해석. 길이를 먼저 제한하고, 같은 키가 반복되면 마지막 값을 쓴다. POST 본문(form 형식)도 같은 규칙으로 읽는다. */
+public final class Query {
 
     private static final int MAX_LENGTH = 2048;
 
     private Query() {
     }
 
-    static Map<String, String> parse(String raw) {
+    public static Map<String, String> parse(String raw) {
         Map<String, String> out = new HashMap<String, String>();
         if (raw == null || raw.isEmpty()) {
             return out;

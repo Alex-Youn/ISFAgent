@@ -4,10 +4,9 @@ import com.dbagent.agent.AgentMain;
 import com.dbagent.agent.config.AgentConfig;
 import com.dbagent.agent.config.SidConfig;
 import com.dbagent.agent.path.PathGuard;
+import com.dbagent.agent.tkprof.TkprofRunner;
 
 import java.net.InetAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -24,11 +23,13 @@ final class HealthService {
 
     private final AgentConfig cfg;
     private final PathGuard guard;
+    private final TkprofRunner tkprof;
     private final String hostName;
 
-    HealthService(AgentConfig cfg, PathGuard guard) {
+    HealthService(AgentConfig cfg, PathGuard guard, TkprofRunner tkprof) {
         this.cfg = cfg;
         this.guard = guard;
+        this.tkprof = tkprof;
         this.hostName = resolveHostName();
     }
 
@@ -43,20 +44,15 @@ final class HealthService {
         m.put("alertLogTimeZone", cfg.getAlertZone().getId());
         List<String> sids = new ArrayList<String>(cfg.getSids().keySet());
         m.put("sids", sids);
-        m.put("tkprofOk", tkprofOk());
+        m.put("tkprofOk", tkprof.isAvailable());
         Map<String, Object> alertOk = new LinkedHashMap<String, Object>();
         for (SidConfig sc : cfg.getSids().values()) {
             alertOk.put(sc.getSid(), guard.isReadable(sc.getAlertLog()));
         }
         m.put("alertLogOk", alertOk);
         m.put("tlsEnabled", false);
-        m.put("busy", false);       // tkprof 동시 1건 제한은 2단계에서 연결한다
+        m.put("busy", tkprof.isBusy());     // tkprof 동시 실행 자리가 모두 찼다(2-A3)
         return m;
-    }
-
-    private boolean tkprofOk() {
-        Path p = cfg.getTkprofPath();
-        return p != null && Files.isRegularFile(p) && Files.isExecutable(p);
     }
 
     private static String resolveHostName() {

@@ -6,6 +6,8 @@ import com.dbagent.agent.alertlog.AlertLogService;
 import com.dbagent.agent.auth.RequestAuthenticator;
 import com.dbagent.agent.config.AgentConfig;
 import com.dbagent.agent.path.PathGuard;
+import com.dbagent.agent.tkprof.TkprofRunner;
+import com.dbagent.agent.tkprof.TkprofService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -42,25 +44,33 @@ public final class AgentHttpServer {
         // 느리게 보내는 연결(slowloris)이 스레드 4개를 붙잡지 못하게 요청·응답 시간 상한을 둔다. JDK 내장 서버가 읽는 시스템 속성이며,
         // HttpServer 클래스가 처음 쓰이기 전에 설정해야 한다. 이 속성을 모르는 JVM 에서는 무시되어 동작에 영향이 없다.
         setIfAbsent("sun.net.httpserver.maxReqTime", "30");
-        setIfAbsent("sun.net.httpserver.maxRspTime", "60");
+        // maxRspTime 은 tkprof 제한 시간을 알아야 하므로 설정을 받는 생성자에서 정한다.
     }
 
     private final AgentConfig cfg;
     private final RequestAuthenticator auth;
     private final HealthService health;
     private final AlertLogService alertLog;
+    private final TkprofRunner tkprofRunner;
+    private final TkprofService tkprof;
     private HttpServer server;
     private ExecutorService executor;
 
     public AgentHttpServer(AgentConfig cfg) {
         this.cfg = cfg;
+        // JDK 내장 서버는 요청을 받은 뒤 응답을 다 쓸 때까지의 시간에도 상한(maxRspTime)을 둔다. tkprof 가 제한 시간까지 돌 수 있으므로
+        // 그보다 길어야 504 응답을 보낼 수 있다(아니면 연결이 먼저 끊긴다). HttpServer 클래스가 처음 쓰이기 전에 설정해야 한다.
+        setIfAbsent("sun.net.httpserver.maxRspTime", String.valueOf(Math.max(60, cfg.getTkprofTimeoutSeconds() + 30)));
         PathGuard guard = new PathGuard(cfg.getAllowedRoots());
         this.auth = new RequestAuthenticator(cfg);
-        this.health = new HealthService(cfg, guard);
+        this.tkprofRunner = new TkprofRunner(cfg);
+        this.health = new HealthService(cfg, guard, tkprofRunner);
         this.alertLog = new AlertLogService(cfg, guard);
+        this.tkprof = new TkprofService(cfg, guard, tkprofRunner);
     }
 
     public void start() throws IOException {
+        tkprofRunner.cleanWorkDir();
         InetSocketAddress addr = new InetSocketAddress(InetAddress.getByName(cfg.getBindAddress()), cfg.getPort());
         server = HttpServer.create(addr, 50);
         executor = Executors.newFixedThreadPool(cfg.getHttpThreads(), new NamedDaemonFactory());
@@ -97,7 +107,7 @@ public final class AgentHttpServer {
             auth.authenticate(ip, method, uri.getRawPath(), uri.getRawQuery(),
                     ex.getRequestHeaders().getFirst("X-Agent-Ts"), ex.getRequestHeaders().getFirst("X-Agent-Nonce"),
                     ex.getRequestHeaders().getFirst("X-Agent-Sig"), ex.getRequestHeaders().getFirst("Authorization"), body);
-            Object result = route(method, uri.getPath(), Query.parse(uri.getRawQuery()));
+            Object result = route(method, uri.getPath(), Query.parse(uri.getRawQuery()), body);
             status = 200;
             send(ex, 200, result);
         } catch (AgentException e) {
@@ -137,7 +147,13 @@ public final class AgentHttpServer {
         }
     }
 
-    private Object route(String method, String path, Map<String, String> q) {
+    private Object route(String method, String path, Map<String, String> q, byte[] body) {
+        if ("/v1/tkprof".equals(path)) {
+            if (!"POST".equals(method)) {
+                throw new AgentException(405, "METHOD_NOT_ALLOWED", "POST 만 지원합니다.");
+            }
+            return tkprof.run(body);
+        }
         boolean health = "/v1/health".equals(path);
         boolean tail = "/v1/alert-log/tail".equals(path);
         boolean search = "/v1/alert-log/search".equals(path);

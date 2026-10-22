@@ -45,7 +45,8 @@ public final class AgentConfig {
     private static final Set<String> KNOWN = new HashSet<String>(Arrays.asList(
             "agent.bind-address", "agent.port", "agent.auth-mode", "agent.token", "agent.token-sha256", "agent.allowed-clients",
             "agent.clock-skew-seconds", "agent.allowed-roots", "agent.oracle-home", "agent.sids", "agent.tkprof.path",
-            "agent.tkprof.timeout-seconds", "agent.tkprof.max-input-mb", "agent.tkprof.nice", "agent.trace.require-identifier",
+            "agent.tkprof.timeout-seconds", "agent.tkprof.max-input-mb", "agent.tkprof.max-concurrent", "agent.tkprof.nice",
+            "agent.trace.require-identifier",
             "agent.output.max-bytes", "agent.alert-log.max-lines", "agent.alert-log.max-scan-mb", "agent.alert-log.charset",
             "agent.alert-log.timezone", "agent.work-dir", "agent.log-dir", "agent.http.threads", "agent.tls.enabled",
             "agent.tls.keystore", "agent.tls.keystore-password", "agent.tls.keystore-type", "agent.tls.protocols"));
@@ -73,6 +74,10 @@ public final class AgentConfig {
     private int alertMaxLines;
     private long alertMaxScanBytes;
     private long outputMaxBytes;
+    private long tkprofMaxInputBytes;
+    private int tkprofTimeoutSeconds;
+    private int tkprofMaxConcurrent;
+    private int tkprofNice;
     private Charset alertCharset;
     private ZoneId alertZone;
     private Path logDir;
@@ -152,6 +157,13 @@ public final class AgentConfig {
         alertMaxLines = intVal("agent.alert-log.max-lines", 5000, 10, 20000);
         alertMaxScanBytes = (long) intVal("agent.alert-log.max-scan-mb", 64, 1, 4096) * 1024L * 1024L;
         outputMaxBytes = intVal("agent.output.max-bytes", 5 * 1024 * 1024, 64 * 1024, 100 * 1024 * 1024);
+        // tkprof 에 넘길 트레이스 파일 크기 상한. 큰 파일은 tkprof 가 오래 돌고 CPU·디스크를 쓰므로 요청 단계에서 거절한다(2-A1).
+        tkprofMaxInputBytes = (long) intVal("agent.tkprof.max-input-mb", 500, 1, 102400) * 1024L * 1024L;
+        // tkprof 한 건이 오래 걸려도 DB 서버를 붙잡지 않도록 제한 시간을 둔다(2-A3). 앱의 응답 대기(기본 150초)는 이 값에 여유를 더한 것이다.
+        tkprofTimeoutSeconds = intVal("agent.tkprof.timeout-seconds", 120, 5, 600);
+        // 동시 실행 수(2026-10-21 오케스트레이터: 원래 1건 -> 설정값, 기본 2). tkprof 는 CPU·디스크를 쓰므로 운영 DB 서버는 1로 낮출 수 있다.
+        tkprofMaxConcurrent = intVal("agent.tkprof.max-concurrent", 2, 1, 8);
+        tkprofNice = intVal("agent.tkprof.nice", 0, 0, 19);
 
         String cs = str("agent.alert-log.charset", null);
         if (cs == null) {
@@ -478,6 +490,25 @@ public final class AgentConfig {
 
     public long getOutputMaxBytes() {
         return outputMaxBytes;
+    }
+
+    /** tkprof 입력(트레이스 파일) 크기 상한(바이트). */
+    public long getTkprofMaxInputBytes() {
+        return tkprofMaxInputBytes;
+    }
+
+    public int getTkprofTimeoutSeconds() {
+        return tkprofTimeoutSeconds;
+    }
+
+    /** tkprof 동시 실행 수. */
+    public int getTkprofMaxConcurrent() {
+        return tkprofMaxConcurrent;
+    }
+
+    /** 0 이면 nice 를 쓰지 않는다. */
+    public int getTkprofNice() {
+        return tkprofNice;
     }
 
     public Charset getAlertCharset() {

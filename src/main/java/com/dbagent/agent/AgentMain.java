@@ -17,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
  *   --config <agent.properties>                        서버 기동
  *   --config <agent.properties> --health               실행 중인 에이전트의 health 를 서명해서 호출
  *   --config <agent.properties> --get "<path?query>"   서명된 GET (예: "/v1/alert-log/tail?sid=PATDB1&lines=20")
+ *   --config <agent.properties> --post "<path>" --data "<k=v&k=v>"   서명된 POST, 본문은 form 형식 (예: "/v1/tkprof")
  *
  * 콘솔·로그 메시지는 영문으로 쓴다: 폐쇄망 AIX 로케일에서 한글이 '?'로 깨진 전례가 있다(2026-10-21 HttpProbe 결과, probe.log).
  */
@@ -28,6 +29,8 @@ public final class AgentMain {
     public static void main(String[] args) throws Exception {
         String config = null;
         String get = null;
+        String post = null;
+        String data = "";
         for (int i = 0; i < args.length; i++) {
             String a = args[i];
             if ("--help".equals(a) || "-h".equals(a)) {
@@ -42,6 +45,10 @@ public final class AgentMain {
                 get = "/v1/health";
             } else if ("--get".equals(a) && i + 1 < args.length) {
                 get = args[++i];
+            } else if ("--post".equals(a) && i + 1 < args.length) {
+                post = args[++i];
+            } else if ("--data".equals(a) && i + 1 < args.length) {
+                data = args[++i];
             } else {
                 System.err.println("Unknown or incomplete argument: " + a);
                 usage();
@@ -57,6 +64,10 @@ public final class AgentMain {
         AgentConfig cfg = loadConfig(config);
         if (get != null) {
             System.exit(AgentClient.get(cfg, get));
+            return;
+        }
+        if (post != null) {
+            System.exit(AgentClient.post(cfg, post, data));
             return;
         }
         runServer(cfg);
@@ -134,5 +145,6 @@ public final class AgentMain {
         System.out.println("       java -jar dbagent-agent.jar --config <agent.properties>");
         System.out.println("       java -jar dbagent-agent.jar --config <agent.properties> --health");
         System.out.println("       java -jar dbagent-agent.jar --config <agent.properties> --get \"/v1/alert-log/tail?sid=<SID>&lines=20\"");
+        System.out.println("       java -jar dbagent-agent.jar --config <agent.properties> --post \"/v1/tkprof\" --data \"sid=<SID>&fileName=<name>.trc&notBefore=<epoch ms>\"");
     }
 }
