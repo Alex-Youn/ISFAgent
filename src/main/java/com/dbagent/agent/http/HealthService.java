@@ -55,13 +55,24 @@ final class HealthService {
         // D8(2026-10-22): 앱이 트레이스를 켜기 전에 v$diag_info 'Diag Trace' 와 이 폴더를 대조한다(300초 SQL 뒤 404 방지).
         // 설정 경로는 계속 숨기되 트레이스 폴더의 실경로만 서명된 요청(인증된 호출자)에게 알린다. 폴더를 못 열면 null.
         Map<String, Object> traceDirs = new LinkedHashMap<String, Object>();
+        Map<String, Object> traceDirsConfigured = new LinkedHashMap<String, Object>();
         for (SidConfig sc : cfg.getSids().values()) {
-            traceDirs.put(sc.getSid(), realTraceDir(sc));
+            String real = realTraceDir(sc);
+            traceDirs.put(sc.getSid(), real);
+            traceDirsConfigured.put(sc.getSid(), real == null ? null : configuredTraceDir(sc));
         }
         m.put("traceDirs", traceDirs);
+        // 링크를 풀기 전의 경로(2026-10-22 앱 점검): v$diag_info 'Diag Trace' 는 심볼릭 링크를 풀지 않은 경로를 주므로 /u01 이 링크인 AIX에서는
+        // 실경로와 글자가 달라 앱의 사전 대조가 늘 실패한다. 앱은 둘 중 하나라도 맞으면 통과시킨다(같은 폴더를 가리키는 두 표기).
+        m.put("traceDirsConfigured", traceDirsConfigured);
         m.put("tlsEnabled", false);
         m.put("busy", tkprof.isBusy());     // tkprof 동시 실행 자리가 모두 찼다(2-A3)
         return m;
+    }
+
+    private static String configuredTraceDir(SidConfig sc) {
+        Path dir = sc.getEffectiveTraceDir();
+        return dir == null ? null : dir.toAbsolutePath().normalize().toString();
     }
 
     private static String realTraceDir(SidConfig sc) {
