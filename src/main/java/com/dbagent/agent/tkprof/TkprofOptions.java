@@ -32,10 +32,18 @@ final class TkprofOptions {
     private final boolean waits;
     private final int printLimit;
 
-    private TkprofOptions(String sortArg, boolean waits, int printLimit) {
+    private final Long maxDumpBytes;
+
+    private TkprofOptions(String sortArg, boolean waits, int printLimit, Long maxDumpBytes) {
         this.sortArg = sortArg;
         this.waits = waits;
         this.printLimit = printLimit;
+        this.maxDumpBytes = maxDumpBytes;
+    }
+
+    /** 트레이스 파일 한도(바이트). null 이면 모름/무제한이라 잘림을 판정하지 않는다. */
+    Long getMaxDumpBytes() {
+        return maxDumpBytes;
     }
 
     static TkprofOptions parse(Map<String, String> p) {
@@ -70,7 +78,28 @@ final class TkprofOptions {
                 throw AgentException.badRequest("printLimit 는 1 이상 " + MAX_PRINT + " 이하여야 합니다.");
             }
         }
-        return new TkprofOptions(sortArg, waits, print);
+        return new TkprofOptions(sortArg, waits, print, maxDumpBytes(p.get("maxDumpBytes")));
+    }
+
+    /**
+     * 트레이스 파일 한도(max_dump_file_size, 바이트). 앱이 연결 B(sfouser)로 읽어 환산해 넘긴다(2-A4, 2026-10-22).
+     * 에이전트는 Oracle 에 접속하지 않아 한도를 모르고, 파일 끝의 잘림 문구는 아직 실측하지 않아 쓰지 않는다.
+     * 없거나 0 이면 "한도를 모름/무제한"이라 잘림을 판정하지 않는다(null).
+     */
+    private static Long maxDumpBytes(String v) {
+        if (v == null || v.isEmpty()) {
+            return null;
+        }
+        long n;
+        try {
+            n = Long.parseLong(v);
+        } catch (NumberFormatException e) {
+            throw AgentException.badRequest("maxDumpBytes 는 정수(바이트)여야 합니다.");
+        }
+        if (n < 0) {
+            throw AgentException.badRequest("maxDumpBytes 는 0 이상이어야 합니다.");
+        }
+        return n == 0 ? null : Long.valueOf(n);
     }
 
     /** tkprof 의 sort= 값. */

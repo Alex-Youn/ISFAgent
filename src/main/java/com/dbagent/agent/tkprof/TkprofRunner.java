@@ -119,7 +119,7 @@ public final class TkprofRunner {
             long t0 = System.nanoTime();
             execute(tool, trace, opt, work, prf, out);
             long elapsedMs = (System.nanoTime() - t0) / 1000000L;
-            return result(prf, trace, elapsedMs);
+            return result(prf, trace, opt, elapsedMs);
         } catch (IOException e) {
             AgentLog.warn("tkprof run failed sid=" + sc.getSid() + " error=" + e);
             throw new AgentException(500, "INTERNAL", "tkprof 를 실행하는 중 오류가 발생했습니다.");
@@ -186,7 +186,7 @@ public final class TkprofRunner {
 
     // ---------------------------------------------------------------- 결과
 
-    private Map<String, Object> result(Path prf, ResolvedTrace trace, long elapsedMs) throws IOException {
+    private Map<String, Object> result(Path prf, ResolvedTrace trace, TkprofOptions opt, long elapsedMs) throws IOException {
         long cap = cfg.getOutputMaxBytes();
         long size = Files.size(prf);
         int toRead = (int) Math.min(size, cap + 1);
@@ -224,6 +224,11 @@ public final class TkprofRunner {
         m.put("truncated", truncated);
         m.put("elapsedMs", elapsedMs);
         m.put("traceBytes", trace.getSizeBytes());
+        // 2-A4: 파일이 max_dump_file_size 의 95% 이상이면 Oracle 이 중간에서 멈췄을 수 있다. 한도를 모르면(요청에 없음/0)
+        // false 로 내리지 않고 cutChecked=false 로 "검사 안 함"을 알린다(조회 못 한 값을 정상으로 보이지 않는 원칙).
+        Long limit = opt.getMaxDumpBytes();
+        m.put("traceMayBeCut", limit != null && trace.getSizeBytes() >= limit.longValue() - limit.longValue() / 20L);
+        m.put("cutChecked", limit != null);
         return m;
     }
 

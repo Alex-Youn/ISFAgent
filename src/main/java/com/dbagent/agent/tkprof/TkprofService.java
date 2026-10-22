@@ -20,6 +20,8 @@ import java.util.regex.Pattern;
  *   sort        선택. elapsed(기본)/exeela/fchela/cpu/disk/query - 고정 목록
  *   waits       선택. true(기본)/false
  *   printLimit  선택. 1~500, 없으면 전체
+ *   maxDumpBytes 선택. 트레이스 파일 한도(max_dump_file_size 를 바이트로 환산한 값, 앱이 넘김). 파일이 이 값의 95% 이상이면 응답
+ *               traceMayBeCut=true. 없거나 0 이면 판정하지 않고 cutChecked=false (2-A4)
  *
  * 순서: 요청 해석 -> 트레이스 파일 확인(TraceFileResolver, 2-A1) -> tkprof 실행(TkprofRunner, 2-A2·2-A3).
  * 오류 코드는 알럿 로그와 같은 규약(400/403/404/413/500)에 TKPROF_UNAVAILABLE(503), BUSY(429), TIMEOUT(504)를 더한다.

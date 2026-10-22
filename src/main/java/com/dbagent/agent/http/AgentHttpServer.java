@@ -8,6 +8,7 @@ import com.dbagent.agent.config.AgentConfig;
 import com.dbagent.agent.path.PathGuard;
 import com.dbagent.agent.tkprof.TkprofRunner;
 import com.dbagent.agent.tkprof.TkprofService;
+import com.dbagent.agent.tkprof.TraceFindService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -53,6 +54,7 @@ public final class AgentHttpServer {
     private final AlertLogService alertLog;
     private final TkprofRunner tkprofRunner;
     private final TkprofService tkprof;
+    private final TraceFindService traceFinder;
     private HttpServer server;
     private ExecutorService executor;
 
@@ -67,6 +69,7 @@ public final class AgentHttpServer {
         this.health = new HealthService(cfg, guard, tkprofRunner);
         this.alertLog = new AlertLogService(cfg, guard);
         this.tkprof = new TkprofService(cfg, guard, tkprofRunner);
+        this.traceFinder = new TraceFindService(cfg, guard);
     }
 
     public void start() throws IOException {
@@ -157,7 +160,8 @@ public final class AgentHttpServer {
         boolean health = "/v1/health".equals(path);
         boolean tail = "/v1/alert-log/tail".equals(path);
         boolean search = "/v1/alert-log/search".equals(path);
-        if (!health && !tail && !search) {
+        boolean traceFind = "/v1/trace/find".equals(path);
+        if (!health && !tail && !search && !traceFind) {
             throw AgentException.notFound("없는 경로입니다.");
         }
         if (!"GET".equals(method)) {
@@ -165,6 +169,9 @@ public final class AgentHttpServer {
         }
         if (health) {
             return this.health.health();
+        }
+        if (traceFind) {
+            return traceFinder.find(q);
         }
         return tail ? alertLog.tail(q) : alertLog.search(q);
     }
