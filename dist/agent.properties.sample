@@ -1,63 +1,66 @@
-# dbagent-agent (ISFAgent) configuration sample.
-# Copy to agent.properties, edit, then: chmod 600 agent.properties   (it holds the token)
+# dbagent-agent (ISFAgent) 설정 견본.
+# 이 파일을 agent.properties 로 복사해 고친 뒤 chmod 600 agent.properties 를 한다(토큰이 들어 있다).
 #
-# Keep this file ASCII: AIX consoles are often EUC-KR and garble UTF-8 text.
-# The required keys below are commented out on purpose - the agent refuses to start until you set them,
-# and it reports every problem at once. Lines starting with # are comments.
+# 주석이 한글(UTF-8)이다. AIX 콘솔이 EUC-KR이면 주석이 깨져 보일 수 있으나 동작에는 영향이 없다(# 줄은 읽지 않는다).
+# 값(IP, 경로, 토큰 등)은 ASCII로만 쓰고, vi로 고칠 때 한글을 새로 넣지 않는 것을 권장한다.
+# 아래 필수 키는 일부러 # 으로 막아 두었다 - 값을 채워 # 을 지우기 전에는 에이전트가 기동하지 않으며,
+# 문제가 있으면 한꺼번에 알려 준다. # 으로 시작하는 줄은 주석이다.
 
 # ---------------------------------------------------------------------------------------------------
-# Network
+# 네트워크
 # ---------------------------------------------------------------------------------------------------
 
-# REQUIRED. IP of THIS server that the app server connects to. Avoid 0.0.0.0 (all interfaces).
+# 필수. 앱 서버가 접속할 이 서버(DB 서버) 자신의 IP. 모든 인터페이스를 여는 0.0.0.0 은 쓰지 않는다.
 #agent.bind-address=10.0.0.11
 
-# Listening port (default 8710).
+# 수신 포트(기본 8710).
 #agent.port=8710
 
-# Optional. Comma separated IPs of the app server(s). Requests from any other address are refused at once.
-# Strongly recommended. Also list this server's own agent.bind-address (127.0.0.1 if bind-address=0.0.0.0):
-# start-agent.sh and --health / --get connect from this server, and would otherwise get HTTP 401.
+# 선택. 앱 서버 IP(쉼표로 여러 개). 이 목록에 없는 주소의 요청은 즉시 거절한다.
+# 설정을 강력히 권장한다. 이 서버 자신의 agent.bind-address 도 함께 적는다(bind-address=0.0.0.0 이면 127.0.0.1):
+# start-agent.sh 와 --health / --get 은 이 서버에서 접속하므로, 빠지면 HTTP 401 이 나온다.
 #agent.allowed-clients=10.0.0.5,10.0.0.11
 
 # ---------------------------------------------------------------------------------------------------
-# Authentication
+# 인증
 # ---------------------------------------------------------------------------------------------------
 
-# hmac (default): every request is signed with the token; the token itself never travels on the wire.
-# bearer: simple token header - the token is visible on the network without TLS. Use only for tests.
+# hmac(기본): 모든 요청을 토큰으로 서명한다. 토큰 자체는 네트워크로 나가지 않는다.
+# bearer: 단순 토큰 헤더 - TLS 없이는 토큰이 네트워크에 그대로 보인다. 시험용으로만 쓴다.
 #agent.auth-mode=hmac
 
-# REQUIRED for hmac. Paste the token generated in the DB InsightFlow "DB management" screen (256-bit, 64 hex chars,
-# minimum 32 characters). Use a different token for every node.
+# hmac 이면 필수. DB InsightFlow "DB 관리" 화면에서 생성한 토큰을 붙여 넣는다(256비트, 16진수 64자, 최소 32자).
+# 노드(서버)마다 서로 다른 토큰을 쓴다.
 #agent.token=
 
-# bearer only: SHA-256 (64 hex) of the token instead of the token itself.
+# bearer 전용: 토큰 원문 대신 토큰의 SHA-256(16진수 64자).
 #agent.token-sha256=
 
-# Allowed difference between the app server clock and this server clock (seconds). Keep both servers on NTP.
+# 앱 서버와 이 서버의 시계 차이 허용치(초). 두 서버 모두 NTP로 맞춰 둔다.
 #agent.clock-skew-seconds=60
 
 # ---------------------------------------------------------------------------------------------------
-# What the agent may read
+# 에이전트가 읽을 수 있는 범위
 # ---------------------------------------------------------------------------------------------------
 
-# REQUIRED. Comma separated absolute directories. The agent reads nothing outside them, and it refuses symbolic links
-# to files. Example: the ADR base directory (diag).
+# 필수. 읽기를 허용할 절대 경로 디렉터리(쉼표로 여러 개). 이 밖의 파일은 읽지 않고, 파일 심볼릭 링크도 거절한다.
+# 예: ADR 기준 디렉터리(diag).
 #agent.allowed-roots=/oracle/app/oracle/diag
 
-# REQUIRED. Comma separated instance names (letters, digits, underscore). One entry per Oracle instance on THIS server.
+# 필수. 이 서버의 Oracle 인스턴스 이름(영문·숫자·밑줄, 쉼표로 여러 개). 이 서버의 인스턴스마다 하나씩 적는다.
+# ps -ef | grep pmon 의 ora_pmon_<SID> 로 확인한다. RAC 는 노드별 이름(예: PATDB1).
 #agent.sids=PATDB1
 
-# REQUIRED per SID. Full path of alert_<SID>.log (text file under the ADR trace directory).
+# SID마다 필수. alert_<SID>.log 의 전체 경로(ADR trace 디렉터리 아래의 텍스트 파일).
+# agent.allowed-roots 안에 있어야 한다. 키 중간의 <SID> 는 agent.sids 에 적은 이름과 같아야 한다.
 #agent.sid.PATDB1.alert-log=/oracle/app/oracle/diag/rdbms/patdb/PATDB1/trace/alert_PATDB1.log
 
-# Step 2 (tkprof) keys - ignored for now, safe to set already.
+# 2단계(tkprof) 키 - 지금은 무시된다. 미리 적어 두어도 안전하다.
 #agent.sid.PATDB1.trace-dir=/oracle/app/oracle/diag/rdbms/patdb/PATDB1/trace
 #agent.sid.PATDB1.oracle-home=/oracle/app/oracle/product/19c
-# Optional. Leave it unset when the OS account that starts the agent already has ORACLE_HOME in its profile:
-# the agent then uses that value. A value here wins over the environment - set it when the agent is started from
-# cron/inittab (no profile) or when the server has several Oracle homes.
+# 선택. 에이전트를 기동하는 OS 계정의 프로필에 ORACLE_HOME 이 이미 있으면 비워 둔다 - 그 값을 쓴다.
+# 여기에 값을 쓰면 환경변수보다 우선한다. cron/inittab 으로 기동해 프로필이 없거나
+# 서버에 Oracle 홈이 여러 개일 때 지정한다.
 #agent.oracle-home=/oracle/app/oracle/product/19c
 #agent.tkprof.path=
 #agent.tkprof.timeout-seconds=120
@@ -66,41 +69,42 @@
 #agent.trace.require-identifier=true
 
 # ---------------------------------------------------------------------------------------------------
-# Alert log reading
+# 알럿 로그 읽기
 # ---------------------------------------------------------------------------------------------------
 
-# Character set of the alert log (default: the JVM default, which is ASCII under LANG=C). Set UTF-8 or EUC-KR if the
-# log contains non-English text.
+# 알럿 로그의 문자셋(기본: JVM 기본 문자셋 - LANG=C 이면 ASCII). 로그에 한글 등 영문 외 글자가 있으면
+# 서버의 로그 인코딩에 맞춰 UTF-8 또는 EUC-KR 로 지정한다.
 #agent.alert-log.charset=UTF-8
 
-# Note: every path in this file must be representable by the JVM file name encoding. Under LANG=C a non-ASCII path (for example
-# Korean) is reported as a CONFIG ERROR at start (it used to end with a stack trace). Use ASCII paths or start the agent
-# with a LANG/LC_ALL that matches the path.
+# 참고: 이 파일의 모든 경로는 JVM 파일명 인코딩으로 표현할 수 있어야 한다. LANG=C 에서 한글 같은 비ASCII 경로는
+# 기동 시 CONFIG ERROR 로 알려 준다(예전에는 스택 트레이스로 끝났다). ASCII 경로를 쓰거나,
+# 경로와 맞는 LANG/LC_ALL 로 에이전트를 기동한다.
 
-# Time zone used for 11g/12.1 style time stamps ("Mon Oct 20 10:00:00 2026"), which carry no zone.
-# Default: the JVM time zone. Set it when the JVM zone differs from the database server zone.
+# 11g/12.1 형식 시각("Mon Oct 20 10:00:00 2026")에는 시간대가 없어서 해석에 쓰는 시간대.
+# 기본: JVM 시간대. JVM 시간대가 DB 서버 시간대와 다를 때 지정한다.
 #agent.alert-log.timezone=Asia/Seoul
 
-# Largest number of lines (tail) / entries (search) one request may return.
-# Default 5000 so the app's alert log popup can show 500 / 1000 / 5000 lines (2026-10-21). Allowed range 10 - 20000.
+# 요청 한 번에 돌려줄 최대 줄 수(tail) / 항목 수(search).
+# 기본 5000 - 앱 알럿 로그 팝업이 500 / 1000 / 5000 줄을 보여 주기 위한 값이다(2026-10-21). 허용 범위 10 ~ 20000.
+# 앱 시스템 설정의 "알럿 로그 최대 줄 수"는 이 값 이하로 둔다.
 #agent.alert-log.max-lines=5000
 
-# How far back (MB) one search may read from the end of the file. A search that reaches this limit reports truncated=true.
+# 검색 한 번이 파일 끝에서 거슬러 읽을 최대 크기(MB). 이 한도에 닿으면 truncated=true 로 알린다.
 #agent.alert-log.max-scan-mb=64
 
-# Upper limit of one response text (bytes).
+# 응답 본문 하나의 상한(바이트).
 #agent.output.max-bytes=5242880
 
 # ---------------------------------------------------------------------------------------------------
-# Runtime
+# 실행
 # ---------------------------------------------------------------------------------------------------
 
-# Worker threads (default 4).
+# 작업 스레드 수(기본 4).
 #agent.http.threads=4
 
-# Log and work directories. Relative paths are relative to the directory of this file.
+# 로그·작업 디렉터리. 상대 경로는 이 파일이 있는 디렉터리 기준이다.
 #agent.log-dir=logs
 #agent.work-dir=work
 
-# TLS is not supported in this version (planned). Leave false.
+# 이 버전은 TLS를 지원하지 않는다(예정). false 로 둔다.
 #agent.tls.enabled=false
